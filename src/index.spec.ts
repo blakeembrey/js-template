@@ -12,4 +12,10 @@ describe("string-template", () => {
 
     expect(fn({ test: "test" })).toEqual("test");
   });
+
+  it("should escape quotes in compilation output", () => {
+    const fn = template("\"Some things\" {{test}} 'quoted'");
+
+    expect(fn({ test: "are" })).toEqual("\"Some things\" are 'quoted'");
+  });
 });

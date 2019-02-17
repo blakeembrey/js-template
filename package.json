@@ -1,6 +1,6 @@
 {
   "name": "@blakeembrey/template",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Fast and simple string template library",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

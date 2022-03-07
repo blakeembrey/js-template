@@ -18,4 +18,22 @@ describe("string-template", () => {
 
     expect(fn({ test: "are" })).toEqual("\"Some things\" are 'quoted'");
   });
+
+  it("should escape backslashes", () => {
+    const fn = template("test\\");
+
+    expect(fn({})).toEqual("test\\");
+  });
+
+  it("should allow functions", () => {
+    const fn = template("{{test()}}");
+
+    expect(fn({ test: () => "help" })).toEqual("help");
+  });
+
+  it("should allow bracket syntax reference", () => {
+    const fn = template("{{['test']}}");
+
+    expect(fn({ test: "hello" })).toEqual("hello");
+  });
 });

@@ -1,4 +1,5 @@
-const DATA_VAR_NAME = "data";
+const INPUT_VAR_NAME = "it";
+const QUOTE_CHAR = '"';
 
 export type Template<T extends object> = (data: T) => string;
 
@@ -6,12 +7,49 @@ export type Template<T extends object> = (data: T) => string;
  * Stringify a template into a function.
  */
 export function compile(value: string, displayName = "template") {
-  const str = value.replace(/"|{{[^{]+}}/g, (prop) => {
-    if (prop === '"') return '\\"';
-    return `" + ${DATA_VAR_NAME}.${prop.slice(2, -2).trim()} + "`;
-  });
+  let result = QUOTE_CHAR;
+  for (let i = 0; i < value.length; i++) {
+    const char = value[i];
 
-  return `function ${displayName}(${DATA_VAR_NAME}) { return "${str}"; }`;
+    // Escape special characters due to quoting.
+    if (char === QUOTE_CHAR || char === "\\") {
+      result += "\\";
+    }
+
+    // Process template param.
+    if (char === "{" && value[i + 1] === "{") {
+      const start = i + 2;
+      let end = 0;
+      let withinString = "";
+
+      for (let j = start; j < value.length; j++) {
+        const char = value[j];
+        if (withinString) {
+          if (char === "\\") j++;
+          else if (char === withinString) withinString = "";
+          continue;
+        } else if (char === "}" && value[j + 1] === "}") {
+          i = j + 1;
+          end = j;
+          break;
+        } else if (char === '"' || char === "'" || char === "`") {
+          withinString = char;
+        }
+      }
+
+      if (!end) throw new TypeError(`Template parameter not closed at ${i}`);
+
+      const param = value.slice(start, end).trim();
+      const sep = `+-/*.?:![]()%&|;={}<>,`.indexOf(param[0]) > -1 ? "" : ".";
+      result += `${QUOTE_CHAR} + (${INPUT_VAR_NAME}${sep}${param}) + ${QUOTE_CHAR}`;
+      continue;
+    }
+
+    result += char;
+  }
+  result += QUOTE_CHAR;
+
+  return `function ${displayName}(${INPUT_VAR_NAME}) { return ${result}; }`;
 }
 
 /**

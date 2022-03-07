@@ -6,7 +6,7 @@ export type Template<T extends object> = (data: T) => string;
  * Stringify a template into a function.
  */
 export function compile(value: string, displayName = "template") {
-  const str = value.replace(/"|{{[^{]+}}/g, prop => {
+  const str = value.replace(/"|{{[^{]+}}/g, (prop) => {
     if (prop === '"') return '\\"';
     return `" + ${DATA_VAR_NAME}.${prop.slice(2, -2).trim()} + "`;
   });

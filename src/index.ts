@@ -1,5 +1,6 @@
 const INPUT_VAR_NAME = "it";
 const QUOTE_CHAR = '"';
+const ESCAPE_CHAR = "\\";
 
 export type Template<T extends object> = (data: T) => string;
 
@@ -12,8 +13,8 @@ export function compile(value: string, displayName = "template") {
     const char = value[i];
 
     // Escape special characters due to quoting.
-    if (char === QUOTE_CHAR || char === "\\") {
-      result += "\\";
+    if (char === QUOTE_CHAR || char === ESCAPE_CHAR) {
+      result += ESCAPE_CHAR;
     }
 
     // Process template param.
@@ -25,7 +26,7 @@ export function compile(value: string, displayName = "template") {
       for (let j = start; j < value.length; j++) {
         const char = value[j];
         if (withinString) {
-          if (char === "\\") j++;
+          if (char === ESCAPE_CHAR) j++;
           else if (char === withinString) withinString = "";
           continue;
         } else if (char === "}" && value[j + 1] === "}") {
@@ -40,7 +41,7 @@ export function compile(value: string, displayName = "template") {
       if (!end) throw new TypeError(`Template parameter not closed at ${i}`);
 
       const param = value.slice(start, end).trim();
-      const sep = `+-/*.?:![]()%&|;={}<>,`.indexOf(param[0]) > -1 ? "" : ".";
+      const sep = param[0] === "[" ? "" : ".";
       result += `${QUOTE_CHAR} + (${INPUT_VAR_NAME}${sep}${param}) + ${QUOTE_CHAR}`;
       continue;
     }

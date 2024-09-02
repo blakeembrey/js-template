@@ -7,7 +7,7 @@ export type Template<T extends object> = (data: T) => string;
 /**
  * Stringify a template into a function.
  */
-export function compile(value: string, displayName = "template") {
+export function compile(value: string) {
   let result = QUOTE_CHAR;
   for (let i = 0; i < value.length; i++) {
     const char = value[i];
@@ -50,16 +50,13 @@ export function compile(value: string, displayName = "template") {
   }
   result += QUOTE_CHAR;
 
-  return `function ${displayName}(${INPUT_VAR_NAME}) { return ${result}; }`;
+  return `function (${INPUT_VAR_NAME}) { return ${result}; }`;
 }
 
 /**
  * Fast and simple string templates.
  */
-export function template<T extends object = object>(
-  value: string,
-  displayName?: string
-) {
-  const body = compile(value, displayName);
+export function template<T extends object = object>(value: string) {
+  const body = compile(value);
   return new Function(`return (${body});`)() as Template<T>;
 }

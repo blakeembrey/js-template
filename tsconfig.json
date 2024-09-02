@@ -6,6 +6,6 @@
     "rootDir": "src",
     "outDir": "dist",
     "module": "commonjs",
-    "types": ["jest"]
+    "types": []
   }
 }

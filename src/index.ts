@@ -1,62 +1,151 @@
-const INPUT_VAR_NAME = "it";
-const QUOTE_CHAR = '"';
-const ESCAPE_CHAR = "\\";
-
 export type Template<T extends object> = (data: T) => string;
 
-/**
- * Stringify a template into a function.
- */
-export function compile(value: string) {
-  let result = QUOTE_CHAR;
-  for (let i = 0; i < value.length; i++) {
-    const char = value[i];
+function* parse(value: string): Generator<Token, Token> {
+  let index = 0;
 
-    // Escape special characters due to quoting.
-    if (char === QUOTE_CHAR || char === ESCAPE_CHAR) {
-      result += ESCAPE_CHAR;
-    }
-
-    // Process template param.
-    if (char === "{" && value[i + 1] === "{") {
-      const start = i + 2;
-      let end = 0;
-      let withinString = "";
-
-      for (let j = start; j < value.length; j++) {
-        const char = value[j];
-        if (withinString) {
-          if (char === ESCAPE_CHAR) j++;
-          else if (char === withinString) withinString = "";
-          continue;
-        } else if (char === "}" && value[j + 1] === "}") {
-          i = j + 1;
-          end = j;
-          break;
-        } else if (char === '"' || char === "'" || char === "`") {
-          withinString = char;
-        }
-      }
-
-      if (!end) throw new TypeError(`Template parameter not closed at ${i}`);
-
-      const param = value.slice(start, end).trim();
-      const sep = param[0] === "[" ? "" : ".";
-      result += `${QUOTE_CHAR} + (${INPUT_VAR_NAME}${sep}${param}) + ${QUOTE_CHAR}`;
+  while (index < value.length) {
+    if (value[index] === "\\") {
+      yield { type: "ESCAPED", index, value: value[index + 1] || "" };
+      index += 2;
       continue;
     }
 
-    result += char;
-  }
-  result += QUOTE_CHAR;
+    if (value[index] === "{" && value[index + 1] === "{") {
+      yield { type: "{{", index, value: "{{" };
+      index += 2;
+      continue;
+    }
 
-  return `function (${INPUT_VAR_NAME}) { return ${result}; }`;
+    if (value[index] === "}" && value[index + 1] === "}") {
+      yield { type: "}}", index, value: "{{" };
+      index += 2;
+      continue;
+    }
+
+    yield { type: "CHAR", index, value: value[index++] };
+  }
+
+  return { type: "END", index, value: "" };
+}
+
+interface Token {
+  type: "{{" | "}}" | "CHAR" | "ESCAPED" | "END";
+  index: number;
+  value: string;
+}
+
+class It {
+  #peek?: Token;
+
+  constructor(private tokens: Generator<Token, Token>) {}
+
+  peek(): Token {
+    if (!this.#peek) {
+      const next = this.tokens.next();
+      this.#peek = next.value;
+    }
+    return this.#peek;
+  }
+
+  tryConsume(type: Token["type"]): Token | undefined {
+    const token = this.peek();
+    if (token.type !== type) return undefined;
+    this.#peek = undefined;
+    return token;
+  }
+
+  consume(type: Token["type"]): Token {
+    const token = this.peek();
+    if (token.type !== type) {
+      throw new TypeError(
+        `Unexpected ${token.type} at index ${token.index}, expected ${type}`,
+      );
+    }
+    this.#peek = undefined;
+    return token;
+  }
 }
 
 /**
  * Fast and simple string templates.
  */
 export function template<T extends object = object>(value: string) {
-  const body = compile(value);
-  return new Function(`return (${body});`)() as Template<T>;
+  const it = new It(parse(value));
+  const values: Array<string | Template<T>> = [];
+  let text = "";
+
+  while (true) {
+    const value = it.tryConsume("CHAR") || it.tryConsume("ESCAPED");
+    if (value) {
+      text += value.value;
+      continue;
+    }
+
+    if (text) {
+      values.push(text);
+      text = "";
+    }
+
+    if (it.tryConsume("{{")) {
+      const path: string[] = [];
+      let key = "";
+
+      while (true) {
+        const escaped = it.tryConsume("ESCAPED");
+        if (escaped) {
+          key += escaped.value;
+          continue;
+        }
+
+        const char = it.tryConsume("CHAR");
+        if (char) {
+          if (char.value === ".") {
+            path.push(key);
+            key = "";
+            continue;
+          }
+          key += char.value;
+          continue;
+        }
+
+        path.push(key);
+        it.consume("}}");
+        break;
+      }
+
+      values.push(getter(path));
+      continue;
+    }
+
+    it.consume("END");
+    break;
+  }
+
+  return (data: T) => {
+    let result = "";
+    for (const value of values) {
+      result += typeof value === "string" ? value : value(data);
+    }
+    return result;
+  };
+}
+
+const hasOwnProperty = Object.prototype.hasOwnProperty;
+
+function getter(path: string[]) {
+  return (data: any) => {
+    let value = data;
+    for (const key of path) {
+      if (hasOwnProperty.call(value, key)) {
+        value = value[key];
+      } else {
+        throw new TypeError(`Missing ${path.map(escape).join(".")} in data`);
+      }
+    }
+    return value;
+  };
+}
+
+function escape(key: string) {
+  return key.replace(/\./g, "\\.");
 }

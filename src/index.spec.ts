@@ -20,21 +20,27 @@ describe("string-template", () => {
     expect(fn({ test: "are" })).toEqual("\"Some things\" are 'quoted'");
   });
 
-  it("should escape backslashes", () => {
+  it("should handle backslashes", () => {
     const fn = template("test\\");
 
-    expect(fn({})).toEqual("test\\");
+    expect(fn({})).toEqual("test");
   });
 
-  it("should allow functions", () => {
-    const fn = template("{{test()}}");
+  it("should handle escaped characters", () => {
+    const fn = template("foo\\bar");
 
-    expect(fn({ test: () => "help" })).toEqual("help");
+    expect(fn({})).toEqual("foobar");
   });
 
-  it("should allow bracket syntax reference", () => {
-    const fn = template("{{['test']}}");
+  it("should allow nested reference", () => {
+    const fn = template("{{foo.bar}}");
 
-    expect(fn({ test: "hello" })).toEqual("hello");
+    expect(fn({ foo: { bar: "hello" } })).toEqual("hello");
+  });
+
+  it("should not access prototype properties", () => {
+    const fn = template("{{toString}}");
+
+    expect(() => fn({})).toThrow(TypeError);
   });
 });

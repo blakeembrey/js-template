@@ -2,7 +2,7 @@
 
 [![NPM version](https://img.shields.io/npm/v/@blakeembrey/template.svg?style=flat)](https://npmjs.org/package/@blakeembrey/template)
 [![NPM downloads](https://img.shields.io/npm/dm/@blakeembrey/template.svg?style=flat)](https://npmjs.org/package/@blakeembrey/template)
-[![Build status](https://img.shields.io/travis/blakeembrey/js-template.svg?style=flat)](https://travis-ci.org/blakeembrey/js-template)
+[![Build status](https://img.shields.io/github/actions/workflow/status/blakeembrey/js-template/ci.yml?branch=main)](https://github.com/blakeembrey/js-template/actions/workflows/ci.yml?query=branch%3Amain)
 [![Test coverage](https://img.shields.io/coveralls/blakeembrey/js-template.svg?style=flat)](https://coveralls.io/r/blakeembrey/js-template?branch=master)
 
 > Fast and simple string template library.
